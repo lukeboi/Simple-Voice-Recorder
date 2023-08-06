@@ -44,6 +44,8 @@ class RecorderService : Service() {
     private var durationTimer = Timer()
     private var amplitudeTimer = Timer()
     private var recorder: Recorder? = null
+    private var switchRecordingTimer = Timer()
+
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -66,6 +68,9 @@ class RecorderService : Service() {
         isRunning = false
         updateWidgets(false)
     }
+
+    private var recordingDurationMinutes = 15  // default value
+//    private var switchRecordingTimer = Timer()
 
     // mp4 output format with aac encoding should produce good enough m4a files according to https://stackoverflow.com/a/33054794/1967672
     private fun startRecording() {
@@ -121,11 +126,22 @@ class RecorderService : Service() {
             durationTimer.scheduleAtFixedRate(getDurationUpdateTask(), 1000, 1000)
 
             startAmplitudeUpdates()
+
+            switchRecordingTimer.cancel()  // Cancel any existing timer
+            switchRecordingTimer = Timer()
+            switchRecordingTimer.schedule(object : TimerTask() {
+                override fun run() {
+                    stopRecording()
+                    startRecording()
+                }
+            }, recordingDurationMinutes * 60L * 1000L, recordingDurationMinutes * 60L * 1000L)  // switch every recordingDurationMinutes minutes
+
         } catch (e: Exception) {
             showErrorToast(e)
             stopRecording()
         }
     }
+
 
     private fun stopRecording() {
         durationTimer.cancel()
